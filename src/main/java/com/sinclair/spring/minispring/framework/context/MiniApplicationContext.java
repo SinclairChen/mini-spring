@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * @Description 初始化IOC容器，完成Bean的创建和DI
@@ -188,5 +189,27 @@ public class MiniApplicationContext {
 
     public Object getBean(Class beanClass) throws Exception {
         return getBean(beanClass.getName());
+    }
+
+    /**
+     * 获取所有BeanDefinition的数量
+     *
+     * @return
+     */
+    public int getBeanDefinitionCount() {
+        return this.beanDefinitionMap.size();
+    }
+
+    /**
+     * 获取beanDefinition容器中的所有类的类名，并通过String[]返回
+     *
+     * @return
+     */
+    public String[] getBeanDefinitionNames() {
+        return this.beanDefinitionMap.keySet().toArray(new String[this.beanDefinitionMap.size()]);
+    }
+
+    public Properties getConfig() {
+        return beanDefinitionReader.getContextConfig();
     }
 }

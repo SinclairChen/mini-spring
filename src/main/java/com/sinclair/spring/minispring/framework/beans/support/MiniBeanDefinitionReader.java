@@ -161,4 +161,7 @@ public class MiniBeanDefinitionReader {
     }
 
 
+    public Properties getContextConfig() {
+        return contextConfig;
+    }
 }

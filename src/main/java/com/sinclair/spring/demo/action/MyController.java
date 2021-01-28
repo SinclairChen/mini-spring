@@ -6,6 +6,7 @@ import com.sinclair.spring.minispring.framework.annotation.MiniAutoWried;
 import com.sinclair.spring.minispring.framework.annotation.MiniController;
 import com.sinclair.spring.minispring.framework.annotation.MiniRequestMapping;
 import com.sinclair.spring.minispring.framework.annotation.MiniRequestParam;
+import com.sinclair.spring.minispring.framework.webmvc.servlet.MiniModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -28,31 +29,31 @@ public class MyController {
     IModifyService modifyService;
 
     @MiniRequestMapping("/query.json")
-    public void query(HttpServletRequest request, HttpServletResponse response, @MiniRequestParam String name) {
+    public MiniModelAndView query(HttpServletRequest request, HttpServletResponse response, @MiniRequestParam String name) {
         String query = queryService.query(name);
-        writeTo(response, query);
+        return writeTo(response, query);
     }
 
     @MiniRequestMapping("/add*.json")
-    public void add(HttpServletRequest request,HttpServletResponse response,
+    public MiniModelAndView add(HttpServletRequest request,HttpServletResponse response,
                     @MiniRequestParam("name") String name,@MiniRequestParam("addr") String addr){
         String result = modifyService.add(name,addr);
-        writeTo(response,result);
+        return writeTo(response,result);
     }
 
     @MiniRequestMapping("/remove.json")
-    public void remove(HttpServletRequest request,HttpServletResponse response,
+    public MiniModelAndView remove(HttpServletRequest request,HttpServletResponse response,
                        @MiniRequestParam("id") Integer id){
         String result = modifyService.remove(id);
-        writeTo(response,result);
+        return writeTo(response,result);
     }
 
     @MiniRequestMapping("/edit.json")
-    public void edit(HttpServletRequest request,HttpServletResponse response,
+    public MiniModelAndView edit(HttpServletRequest request,HttpServletResponse response,
                      @MiniRequestParam("id") Integer id,
                      @MiniRequestParam("name") String name){
         String result = modifyService.edit(id,name);
-        writeTo(response,result);
+        return writeTo(response,result);
     }
 
     /**
@@ -60,11 +61,12 @@ public class MyController {
      * @param response
      * @param str
      */
-    public void writeTo(HttpServletResponse response, String str) {
+    public MiniModelAndView writeTo(HttpServletResponse response, String str) {
         try {
             response.getWriter().write(str);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 }
