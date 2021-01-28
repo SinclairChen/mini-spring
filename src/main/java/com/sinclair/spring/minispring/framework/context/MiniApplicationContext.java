@@ -169,12 +169,17 @@ public class MiniApplicationContext {
 
         Object instance = null;
         try {
-            Class<?> beanClass = Class.forName(className);
-            instance = beanClass.newInstance();
+            //判断下容器中有没有，如果有直接拿，没有再创建
+            if (this.factoryBeanInstanceCache.containsKey(beanName)) {
+                instance = this.factoryBeanInstanceCache.get(beanName);
+            } else {
 
-            //缓存没有装饰过的，原始的bean对象
-            this.factoryBeanObjectCache.put(beanName, instance);
+                Class<?> beanClass = Class.forName(className);
+                instance = beanClass.newInstance();
 
+                //缓存没有装饰过的，原始的bean对象
+                this.factoryBeanObjectCache.put(beanName, instance);
+            }
         }catch (Exception e) {
             e.printStackTrace();
         }

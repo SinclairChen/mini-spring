@@ -1,7 +1,7 @@
 package com.sinclair.spring.minispring.framework.beans;
 
 /**
- * @Description TODO
+ * @Description Bean的装饰器类
  * @Date 2021/1/28 15:00
  * @Author by Saiyong.Chen
  */
