@@ -2,6 +2,9 @@ package com.sinclair.spring.minispring.framework.context;
 
 import com.sinclair.spring.minispring.framework.annotation.MiniAutoWried;
 import com.sinclair.spring.minispring.framework.annotation.MiniController;
+import com.sinclair.spring.minispring.framework.aop.MiniJdkDynamicAopProxy;
+import com.sinclair.spring.minispring.framework.aop.config.MiniAopConfig;
+import com.sinclair.spring.minispring.framework.aop.support.MiniAdviceSupport;
 import com.sinclair.spring.minispring.framework.beans.MiniBeanWrapper;
 import com.sinclair.spring.minispring.framework.beans.config.MiniBeanDefinition;
 import com.sinclair.spring.minispring.framework.beans.support.MiniBeanDefinitionReader;
@@ -91,7 +94,7 @@ public class MiniApplicationContext {
         //1.获取MiniDefinition
         MiniBeanDefinition beanDefinition = this.beanDefinitionMap.get(beanName);
 
-        //2.反射实例化
+        //2.初始化bean对象
         Object instance = instantiateBean(beanName, beanDefinition);
 
         if (instance == null) {
@@ -105,7 +108,7 @@ public class MiniApplicationContext {
         factoryBeanInstanceCache.put(beanName, beanWrapper);
         
         //5. 依赖注入
-        populateBean(beanName, beanDefinition, beanWrapper);
+        populateBean(beanWrapper);
 
         return beanWrapper.getWrapperInstance();
     }
@@ -113,11 +116,9 @@ public class MiniApplicationContext {
     /**
      * 进行依赖注入
      *
-     * @param beanName
-     * @param beanDefinition
      * @param beanWrapper
      */
-    private void populateBean(String beanName, MiniBeanDefinition beanDefinition, MiniBeanWrapper beanWrapper) {
+    private void populateBean(MiniBeanWrapper beanWrapper) {
 
         //涉及到循环依赖
         //我们可以将第一没有注入的，保存起来，然后再次循环一次进行注入
@@ -160,7 +161,8 @@ public class MiniApplicationContext {
     }
 
     /**
-     * 实例化Bean对象
+     * 实例化Bean对象（这里需要进行aop）
+     *
      * @param beanName
      * @param beanDefinition
      * @return
@@ -178,6 +180,17 @@ public class MiniApplicationContext {
                 Class<?> beanClass = Class.forName(className);
                 instance = beanClass.newInstance();
 
+                //========================Aop============================
+                //初始化对应的aop支持类，并将本次循环的类和实例对象设置进去，便于后续使用
+                MiniAdviceSupport adviceSupport = instantionAopConfig();
+                adviceSupport.setTargetClass(beanClass);
+                adviceSupport.setTarget(instance);
+                //看看这个类和我们定义的切入表达式上的类是否匹配，如果匹配生成代理对象
+                if(adviceSupport.pointCoutMatch()) {
+                    instance = new MiniJdkDynamicAopProxy(adviceSupport).getProxy();
+                }
+                //========================Aop============================
+
                 //缓存没有装饰过的，原始的bean对象
                 this.factoryBeanObjectCache.put(beanName, instance);
             }
@@ -185,6 +198,23 @@ public class MiniApplicationContext {
             e.printStackTrace();
         }
         return instance;
+    }
+
+    /**
+     * 创建Aopconfig对象 和 Aop的支持类
+     *
+     * @return
+     */
+    private MiniAdviceSupport instantionAopConfig() {
+        MiniAopConfig aopConfig = new MiniAopConfig();
+        aopConfig.setPointCut(this.beanDefinitionReader.getContextConfig().getProperty("pointCut"));
+        aopConfig.setAspectBefore(this.beanDefinitionReader.getContextConfig().getProperty("aspectBefore"));
+        aopConfig.setAspectAfter(this.beanDefinitionReader.getContextConfig().getProperty("aspectAfter"));
+        aopConfig.setAspectAfterThrows(this.beanDefinitionReader.getContextConfig().getProperty("aspectAfterThrows"));
+        aopConfig.setAspectAfterThrowingName(this.beanDefinitionReader.getContextConfig().getProperty("aspectAfterThrowingName"));
+        aopConfig.setAspectClass(this.beanDefinitionReader.getContextConfig().getProperty("aspectClass"));
+
+        return new MiniAdviceSupport(aopConfig);
     }
 
     public Object getBean(Class beanClass) throws Exception {
