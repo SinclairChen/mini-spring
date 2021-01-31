@@ -5,9 +5,11 @@ import com.sinclair.spring.minispring.framework.annotation.MiniController;
 import com.sinclair.spring.minispring.framework.aop.MiniJdkDynamicAopProxy;
 import com.sinclair.spring.minispring.framework.aop.config.MiniAopConfig;
 import com.sinclair.spring.minispring.framework.aop.support.MiniAdviceSupport;
+import com.sinclair.spring.minispring.framework.beans.core.MiniBeanFactory;
 import com.sinclair.spring.minispring.framework.beans.MiniBeanWrapper;
 import com.sinclair.spring.minispring.framework.beans.config.MiniBeanDefinition;
 import com.sinclair.spring.minispring.framework.beans.support.MiniBeanDefinitionReader;
+import com.sinclair.spring.minispring.framework.beans.support.MiniDefaultListableBeanFactory;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -20,13 +22,11 @@ import java.util.Properties;
  * @Date 2021/1/28 12:55
  * @Author by Saiyong.Chen
  */
-public class MiniApplicationContext {
-
+public class MiniApplicationContext implements MiniBeanFactory {
 
     private MiniBeanDefinitionReader beanDefinitionReader;
 
-    /** BeanDefinition缓存容器；用于缓存beanDefinition 便于后续使用 */
-    private Map<String, MiniBeanDefinition> beanDefinitionMap = new HashMap<String, MiniBeanDefinition>();
+    private MiniDefaultListableBeanFactory registry = new MiniDefaultListableBeanFactory();
 
     /** ioc 容器 */
     private Map<String, MiniBeanWrapper> factoryBeanInstanceCache = new HashMap<String, MiniBeanWrapper>();
@@ -44,7 +44,7 @@ public class MiniApplicationContext {
             List<MiniBeanDefinition> beanDefinitions = beanDefinitionReader.loadBeanDefinitions();
 
             //3. 把BeanDefinition缓存起来
-            doRegistBeanDefinition(beanDefinitions);
+            registry.doRegistBeanDefinition(beanDefinitions);
 
             //4. 依赖注入
             doAutowried();
@@ -57,7 +57,7 @@ public class MiniApplicationContext {
     private void doAutowried() {
 
         try {
-            for (Map.Entry<String, MiniBeanDefinition> beanDefinitionEntry : this.beanDefinitionMap.entrySet()) {
+            for (Map.Entry<String, MiniBeanDefinition> beanDefinitionEntry : registry.beanDefinitionMap.entrySet()) {
                 String beanName = beanDefinitionEntry.getKey();
                 //调用getBean的时候触发实例化
                 getBean(beanName);
@@ -67,32 +67,33 @@ public class MiniApplicationContext {
         }
     }
 
-    /**
-     * 将beanDefinition缓存起来
-     *
-     * @param beanDefinitions
-     */
-    private void doRegistBeanDefinition(List<MiniBeanDefinition> beanDefinitions) throws Exception {
-        for (MiniBeanDefinition beanDefinition : beanDefinitions) {
-
-            if(this.beanDefinitionMap.containsKey(beanDefinition.getFactoryBeanName())) {
-                throw new Exception("The " + beanDefinition.getFactoryBeanName() + " is exist!");
-            }
-
-            beanDefinitionMap.put(beanDefinition.getFactoryBeanName(), beanDefinition);
-            beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
-        }
-    }
+//    /**
+//     * 将beanDefinition缓存起来
+//     *
+//     * @param beanDefinitions
+//     */
+//    private void doRegistBeanDefinition(List<MiniBeanDefinition> beanDefinitions) throws Exception {
+//        for (MiniBeanDefinition beanDefinition : beanDefinitions) {
+//
+//            if(this.beanDefinitionMap.containsKey(beanDefinition.getFactoryBeanName())) {
+//                throw new Exception("The " + beanDefinition.getFactoryBeanName() + " is exist!");
+//            }
+//
+//            beanDefinitionMap.put(beanDefinition.getFactoryBeanName(), beanDefinition);
+//            beanDefinitionMap.put(beanDefinition.getBeanClassName(), beanDefinition);
+//        }
+//    }
 
     /**
      * 实例化bean，进行DI
      * @param beanName
      * @return
      */
+    @Override
     public Object getBean(String beanName) throws Exception {
 
         //1.获取MiniDefinition
-        MiniBeanDefinition beanDefinition = this.beanDefinitionMap.get(beanName);
+        MiniBeanDefinition beanDefinition = registry.beanDefinitionMap.get(beanName);
 
         //2.初始化bean对象
         Object instance = instantiateBean(beanName, beanDefinition);
@@ -217,6 +218,7 @@ public class MiniApplicationContext {
         return new MiniAdviceSupport(aopConfig);
     }
 
+    @Override
     public Object getBean(Class beanClass) throws Exception {
         return getBean(beanClass.getName());
     }
@@ -227,7 +229,7 @@ public class MiniApplicationContext {
      * @return
      */
     public int getBeanDefinitionCount() {
-        return this.beanDefinitionMap.size();
+        return registry.beanDefinitionMap.size();
     }
 
     /**
@@ -236,7 +238,7 @@ public class MiniApplicationContext {
      * @return
      */
     public String[] getBeanDefinitionNames() {
-        return this.beanDefinitionMap.keySet().toArray(new String[this.beanDefinitionMap.size()]);
+        return registry.beanDefinitionMap.keySet().toArray(new String[registry.beanDefinitionMap.size()]);
     }
 
     public Properties getConfig() {
