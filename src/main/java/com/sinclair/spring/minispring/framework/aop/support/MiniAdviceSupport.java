@@ -1,11 +1,13 @@
 package com.sinclair.spring.minispring.framework.aop.support;
 
 import com.sinclair.spring.minispring.framework.aop.aspect.MiniAdvice;
+import com.sinclair.spring.minispring.framework.aop.aspect.MiniAfterReturningAdviceInterceptor;
+import com.sinclair.spring.minispring.framework.aop.aspect.MiniAspectAfterThrowingAdviceInterceptor;
+import com.sinclair.spring.minispring.framework.aop.aspect.MiniMethodBeforAdviceInterceptor;
 import com.sinclair.spring.minispring.framework.aop.config.MiniAopConfig;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -22,11 +24,26 @@ public class MiniAdviceSupport {
 
     private Pattern pointCutClassPattern;
 
-    private Map<Method, Map<String, MiniAdvice>> methodCache;
+//    private Map<Method, Map<String, MiniAdvice>> methodCache;
+
+    private Map<Method, List<Object>> methodCache;
 
 
     public MiniAdviceSupport(MiniAopConfig aopConfig) {
         this.aopConfig = aopConfig;
+    }
+
+
+    /**
+     * 返回通知的责任链
+     *
+     * @param method
+     * @param beanClass
+     * @return
+     */
+    public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method method, Class<?> beanClass) {
+
+        return null;
     }
 
     /**
@@ -37,21 +54,21 @@ public class MiniAdviceSupport {
      * @return
      * @throws NoSuchMethodException
      */
-    public Map<String, MiniAdvice> getAdvice(Method method, Object o) throws NoSuchMethodException {
-        Map<String, MiniAdvice> adviceMap = methodCache.get(method);
-
-        //如果没有，放入
-        if (adviceMap == null) {
-            Method m = beanClass.getMethod(method.getName(), method.getParameterTypes());
-
-            //
-            adviceMap = null;
-
-            this.methodCache.put(m, adviceMap);
-        }
-
-        return adviceMap;
-    }
+//    public Map<String, MiniAdvice> getAdvice(Method method, Object o) throws NoSuchMethodException {
+//        Map<String, MiniAdvice> adviceMap = methodCache.get(method);
+//
+//        //如果没有，放入
+//        if (adviceMap == null) {
+//            Method m = beanClass.getMethod(method.getName(), method.getParameterTypes());
+//
+//            //
+//            adviceMap = null;
+//
+//            this.methodCache.put(m, adviceMap);
+//        }
+//
+//        return adviceMap;
+//    }
 
 
     /**
@@ -87,13 +104,18 @@ public class MiniAdviceSupport {
                 .replaceAll("\\)","\\\\)");
         Pattern pointCutPattern = Pattern.compile(pointCut);
 
-        methodCache = new HashMap<Method, Map<String, MiniAdvice>>();
+//        methodCache = new HashMap<Method, Map<String, MiniAdvice>>();
+
+        methodCache = new HashMap<Method, List<Object>>();
 
 
         try {
             //2. 拿到织入对象，获取before、 after之类的织入的方法并保存起来，便于后续处理
             Class<?> aspectClass = Class.forName(this.aopConfig.getAspectClass());
+            
+            
             Map<String, Method> aspectMethods = new HashMap<>();
+
             for (Method method : aspectClass.getMethods()) {
                 aspectMethods.put(method.getName(), method);
             }
@@ -112,22 +134,30 @@ public class MiniAdviceSupport {
                 Matcher matcher = pointCutPattern.matcher(methodString);
 
                 if (matcher.matches()) {
-                    Map<String, MiniAdvice> adviceMap = new HashMap<>();
+//                    Map<String, MiniAdvice> adviceMap = new HashMap<>();
+                    List<Object> advices = new LinkedList<Object>();
 
                     if (!(aopConfig.getAspectBefore() == null || "".equals(aopConfig.getAspectBefore()))) {
-                        adviceMap.put("before", new MiniAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
+//                        adviceMap.put("before", new MiniAdvice(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
+                        advices.add(new MiniMethodBeforAdviceInterceptor(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectBefore())));
                     }
                     if(!(null == aopConfig.getAspectAfter() || "".equals(aopConfig.getAspectAfter()))){
-                        adviceMap.put("after",new MiniAdvice(aspectClass.newInstance(),aspectMethods.get(aopConfig.getAspectAfter())));
+//                        adviceMap.put("after",new MiniAdvice(aspectClass.newInstance(),aspectMethods.get(aopConfig.getAspectAfter())));
+                        advices.add(new MiniAfterReturningAdviceInterceptor(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfter())));
                     }
                     if(!(null == aopConfig.getAspectAfterThrows() || "".equals(aopConfig.getAspectAfterThrows()))){
-                        MiniAdvice advice = new MiniAdvice(aspectClass.newInstance(),aspectMethods.get(aopConfig.getAspectAfterThrows()));
-                        advice.setThrowName(aopConfig.getAspectAfterThrowingName());
-                        adviceMap.put("afterThrow",advice);
+//                        MiniAdvice advice = new MiniAdvice(aspectClass.newInstance(),aspectMethods.get(aopConfig.getAspectAfterThrows()));
+
+//                        advice.setThrowName(aopConfig.getAspectAfterThrowingName());
+//                        adviceMap.put("afterThrow",advice);
+
+                        MiniAspectAfterThrowingAdviceInterceptor afterThrowingAdviceInterceptor = new MiniAspectAfterThrowingAdviceInterceptor(aspectClass.newInstance(), aspectMethods.get(aopConfig.getAspectAfterThrows()));
+                        advices.add(afterThrowingAdviceInterceptor);
+
                     }
 
                     // 最后将目标方法和织入的方法关联起来，便于在动态代理类中使用
-                    methodCache.put(method,adviceMap);
+                    methodCache.put(method,advices);
                 }
             }
 

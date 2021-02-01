@@ -1,11 +1,13 @@
 package com.sinclair.spring.minispring.framework.aop;
 
 import com.sinclair.spring.minispring.framework.aop.aspect.MiniAdvice;
+import com.sinclair.spring.minispring.framework.aop.interceptor.MiniMethodInvocation;
 import com.sinclair.spring.minispring.framework.aop.support.MiniAdviceSupport;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -13,49 +15,59 @@ import java.util.Map;
  * @Date 2021/1/29 7:08
  * @Author by Saiyong.Chen
  */
-public class MiniJdkDynamicAopProxy implements InvocationHandler {
+public class MiniJdkDynamicAopProxy implements MiniAopProxy, InvocationHandler {
 
-    private MiniAdviceSupport adviceSupport;
+    private MiniAdviceSupport advised;
 
     public MiniJdkDynamicAopProxy(MiniAdviceSupport adviceSupport) {
-        this.adviceSupport = adviceSupport;
+        this.advised = adviceSupport;
     }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
-        Map<String, MiniAdvice> adviceMap = adviceSupport.getAdvice(method, null);
+//        Map<String, MiniAdvice> adviceMap = advised.getAdvice(method, null);
 
-        try {
-            //前置通知
-            invokeAdvice(adviceMap.get("before"));
+//        try {
+//            //前置通知
+//            invokeAdvice(adviceMap.get("before"));
+//
+//            method.invoke(this.advised.getTarget(), args);
+//
+//            //后置通知
+//            invokeAdvice(adviceMap.get("after"));
+//        } catch (Exception e) {
+//            invokeAdvice(adviceMap.get("afterThrowing"));
+//            e.printStackTrace();
+//        }
 
-            method.invoke(this.adviceSupport.getTarget(), args);
+        List<Object> chain = advised.getInterceptorsAndDynamicInterceptionAdvice(method, this.advised.getBeanClass());
 
-            //后置通知
-            invokeAdvice(adviceMap.get("after"));
-        } catch (Exception e) {
-            invokeAdvice(adviceMap.get("afterThrowing"));
-            e.printStackTrace();
-        }
-        return null;
+        MiniMethodInvocation invocation = new MiniMethodInvocation(proxy, this.advised.getTarget() , method, args, this.advised.getBeanClass(),chain);
+        return invocation.proceed();
     }
 
     /**
      * 调用织入的方法
      *
-     * @param advice
+     * @param
      */
-    private void invokeAdvice(MiniAdvice advice) {
-        try {
-            advice.getAdviceMethod().invoke(advice.getAspect());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//    private void invokeAdvice(MiniAdvice advice) {
+//        try {
+//            advice.getAdviceMethod().invoke(advice.getAspect());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+
+    @Override
+    public Object getProxy() {
+        return getProxy(this.getClass().getClassLoader());
     }
 
-
-    public Object getProxy() {
-        return Proxy.newProxyInstance(this.getClass().getClassLoader(), this.adviceSupport.getBeanClass().getInterfaces(), this);
+    @Override
+    public Object getProxy(ClassLoader classLoader) {
+        return Proxy.newProxyInstance(classLoader, this.advised.getBeanClass().getInterfaces(), this);
     }
 }

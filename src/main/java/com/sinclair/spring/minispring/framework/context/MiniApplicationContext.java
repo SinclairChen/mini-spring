@@ -2,6 +2,8 @@ package com.sinclair.spring.minispring.framework.context;
 
 import com.sinclair.spring.minispring.framework.annotation.MiniAutoWried;
 import com.sinclair.spring.minispring.framework.annotation.MiniController;
+import com.sinclair.spring.minispring.framework.aop.MiniAopProxy;
+import com.sinclair.spring.minispring.framework.aop.MiniDefaultAopProxyFactory;
 import com.sinclair.spring.minispring.framework.aop.MiniJdkDynamicAopProxy;
 import com.sinclair.spring.minispring.framework.aop.config.MiniAopConfig;
 import com.sinclair.spring.minispring.framework.aop.support.MiniAdviceSupport;
@@ -28,11 +30,15 @@ public class MiniApplicationContext implements MiniBeanFactory {
 
     private MiniDefaultListableBeanFactory registry = new MiniDefaultListableBeanFactory();
 
+    /** 生成代理类工厂 */
+    private MiniDefaultAopProxyFactory proxyFactory = new MiniDefaultAopProxyFactory();
+
     /** ioc 容器 */
     private Map<String, MiniBeanWrapper> factoryBeanInstanceCache = new HashMap<String, MiniBeanWrapper>();
 
     /** 保存原始的bean实例对象 */
     private Map<String, Object> factoryBeanObjectCache = new HashMap<String, Object>();
+
 
     public MiniApplicationContext(String... configLocations) {
 
@@ -188,7 +194,10 @@ public class MiniApplicationContext implements MiniBeanFactory {
                 adviceSupport.setTarget(instance);
                 //看看这个类和我们定义的切入表达式上的类是否匹配，如果匹配生成代理对象
                 if(adviceSupport.pointCoutMatch()) {
-                    instance = new MiniJdkDynamicAopProxy(adviceSupport).getProxy();
+
+//                    instance = new MiniJdkDynamicAopProxy(adviceSupport).getProxy();
+
+                    instance = proxyFactory.createAopProxy(adviceSupport).getProxy();
                 }
                 //========================Aop============================
 
