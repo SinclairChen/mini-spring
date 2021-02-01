@@ -6,6 +6,7 @@ import com.sinclair.spring.minispring.framework.aop.aspect.MiniAspectAfterThrowi
 import com.sinclair.spring.minispring.framework.aop.aspect.MiniMethodBeforAdviceInterceptor;
 import com.sinclair.spring.minispring.framework.aop.config.MiniAopConfig;
 
+import javax.lang.model.element.VariableElement;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -41,9 +42,15 @@ public class MiniAdviceSupport {
      * @param beanClass
      * @return
      */
-    public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method method, Class<?> beanClass) {
+    public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method method, Class<?> beanClass) throws NoSuchMethodException {
 
-        return null;
+        List<Object> cached = this.methodCache.get(method);
+        if (cached == null) {
+            Method m = beanClass.getMethod(method.getName(), method.getParameterTypes());
+            cached = this.methodCache.get(m);
+            this.methodCache.put(m, cached);
+        }
+        return cached;
     }
 
     /**
